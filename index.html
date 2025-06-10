@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Maps | BrickMMO</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+        }
+        #container {
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+            position: relative;
+            touch-action: none;
+            perspective: 1200px;
+        }
+        #grid {
+            display: grid;
+            grid-template-columns: repeat(27, 20px);
+            grid-template-rows: repeat(30, 20px);
+            gap: 1px;
+            position: absolute;
+            left: 0;
+            top: 0;
+            transform-origin: center center;
+            transition: box-shadow 0.2s;
+        }
+        .square {
+            width: 20px;
+            height: 20px;
+            box-sizing: border-box;
+        }
+        .ground { background: #996633; }
+        .road { background: #888; }
+        .track { background: #777; }
+        .water { background: #3498db; } /* Blue for water */
+    </style>
+</head>
+<body>
+    <div id="container">
+        <div id="grid"></div>
+    </div>
+    <script>
+        fetch('map.json')
+            .then(response => {
+                if (!response.ok) throw new Error('Network response was not ok');
+                return response.json();
+            })
+            .then(data => {
+                const gridDiv = document.getElementById('grid');
+                data.squares.forEach(square => {
+
+                    const isTrack = square.tracks > 0;
+                    const isRoad = square.roads > 0;
+
+                    let typeClass = square.type;
+                    if (isTrack) typeClass = 'track';
+                    if (isRoad) typeClass = 'road';
+
+                    const div = document.createElement('div');
+                    div.className = 'square ' + typeClass;
+                    div.title = `(${square.x}, ${square.y}): ${typeClass}`;
+                    gridDiv.appendChild(div);
+                    
+                });
+
+                // Center the grid in the container
+                const container = document.getElementById('container');
+                const grid = document.getElementById('grid');
+                // Get container and grid sizes
+                const containerRect = container.getBoundingClientRect();
+                const gridWidth = 27 * 20 + 26 * 1; // squares + gaps
+                const gridHeight = 30 * 20 + 29 * 1;
+                // Set initial offset to center
+                offsetX = (containerRect.width - gridWidth) / 2;
+                offsetY = (containerRect.height - gridHeight) / 2;
+                grid.style.left = offsetX + 'px';
+                grid.style.top = offsetY + 'px';
+            })
+            .catch(error => {
+                console.error('Error loading maps.json:', error);
+            });
+
+        // Drag and 3D rotate logic
+        const grid = document.getElementById('grid');
+        const container = document.getElementById('container');
+        let isDragging = false;
+        let isRotating3D = false;
+        let lastX = 0, lastY = 0;
+        let offsetX = 0, offsetY = 0;
+        let rotateX = 0, rotateY = 0;
+        let scale = 1;
+
+        container.addEventListener('mousedown', (e) => {
+            if (e.button === 2 || e.ctrlKey) { // Right click or Ctrl+Click to 3D rotate
+                isRotating3D = true;
+                lastX = e.clientX;
+                lastY = e.clientY;
+            } else {
+                isDragging = true;
+                lastX = e.clientX;
+                lastY = e.clientY;
+            }
+        });
+
+        container.addEventListener('mousemove', (e) => {
+            if (isDragging) {
+                offsetX += e.clientX - lastX;
+                offsetY += e.clientY - lastY;
+                lastX = e.clientX;
+                lastY = e.clientY;
+                grid.style.left = offsetX + 'px';
+                grid.style.top = offsetY + 'px';
+            } else if (isRotating3D) {
+                rotateY += (e.clientX - lastX) * 0.5;
+                rotateX -= (e.clientY - lastY) * 0.5;
+                lastX = e.clientX;
+                lastY = e.clientY;
+                grid.style.transform = `scale(${scale}) rotateX(${rotateX}deg) rotateY(${rotateY}deg)`;
+            }
+        });
+
+        container.addEventListener('mouseup', () => {
+            isDragging = false;
+            isRotating3D = false;
+        });
+
+        container.addEventListener('mouseleave', () => {
+            isDragging = false;
+            isRotating3D = false;
+        });
+
+        // Prevent context menu on right click
+        container.addEventListener('contextmenu', e => e.preventDefault());
+
+        // Touch support for mobile (optional, only 2D drag here)
+        let lastTouchDist = null;
+        container.addEventListener('touchstart', (e) => {
+            if (e.touches.length === 1) {
+                isDragging = true;
+                lastX = e.touches[0].clientX;
+                lastY = e.touches[0].clientY;
+            } else if (e.touches.length === 2) {
+                isDragging = false;
+                pinchStartDist = getTouchDist(e);
+                pinchStartScale = scale;
+            }
+        });
+        container.addEventListener('touchmove', (e) => {
+            if (isDragging && e.touches.length === 1) {
+                offsetX += e.touches[0].clientX - lastX;
+                offsetY += e.touches[0].clientY - lastY;
+                lastX = e.touches[0].clientX;
+                lastY = e.touches[0].clientY;
+                grid.style.left = offsetX + 'px';
+                grid.style.top = offsetY + 'px';
+            } else if (e.touches.length === 2 && pinchStartDist !== null) {
+                const newDist = getTouchDist(e);
+                let newScale = pinchStartScale * (newDist / pinchStartDist);
+                scale = Math.max(0.2, Math.min(3, newScale));
+                grid.style.transform = `scale(${scale}) rotateX(${rotateX}deg) rotateY(${rotateY}deg)`;
+            }
+        });
+        container.addEventListener('touchend', (e) => {
+            isDragging = false;
+            if (e.touches.length < 2) {
+                pinchStartDist = null;
+            }
+        });
+
+        // Use scroll (wheel) to rotate the map around both axes, switched
+        container.addEventListener('wheel', (e) => {
+            e.preventDefault();
+            // e.deltaY: up/down scroll, e.deltaX: left/right scroll
+            rotateX += e.deltaY * 0.3; // vertical scroll rotates X axis (up/down)
+            rotateY += e.deltaX * 0.3; // horizontal scroll rotates Y axis (left/right)
+            grid.style.transform = `scale(${scale}) rotateX(${rotateX}deg) rotateY(${rotateY}deg)`;
+        }, { passive: false });
+    </script>
+</body>
+</html>
