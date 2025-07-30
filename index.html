@@ -1,9 +1,12 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
     <title>Maps | BrickMMO</title>
+
     <style>
         body {
             margin: 0;
@@ -49,6 +52,7 @@
             height: 20px;
             box-sizing: border-box;
         }
+        
         .ground { background: #996633; }
         .road { background: #888; }
         .track { background: #777; }
@@ -62,19 +66,23 @@
             text-decoration: none !important;
         }
     </style>
+
 </head>
 <body>
+
     <div id="sidebar">
         <form id="searchForm" autocomplete="off" style="margin-bottom:20px;">
             <label for="searchInput" style="display:block;margin-bottom:8px;">Search Buildings:</label>
             <input type="text" id="searchInput" style="width:100%;padding:8px; box-sizing: border-box;" placeholder="Type to search..." />
         </form>
+        <!--<button id="centerMapBtn" style="width:100%;margin-bottom:20px;">Center Map</button>-->
         <div id="searchResults"></div>
         <div id="profileView" style="display:none;"></div>
     </div>
     <div id="container">
         <div id="grid"></div>
     </div>
+
     <script>
 
         const cityId = 1;
@@ -82,17 +90,23 @@
 
         /*
          *
-         * Load the map data from a local JSON file or API endpoint
+         * Load the map data from a local JSON file or API endpoint.
          * 
          */
         fetch('map.json')
         // fetch('https://api.brickmmo.com/map/grid/city_id/' + cityId)
+
+            // Convert json response to a JavaScript object
             .then(response => {
                 if (!response.ok) throw new Error('Network response was not ok');
                 return response.json();
             })  
+
+            // Process the data and create the grid
             .then(data => {
+
                 const gridDiv = document.getElementById('grid');
+
                 data.squares.forEach(square => {
                     const isTrack = square.tracks > 0;
                     const isRoad = square.roads > 0;
@@ -105,6 +119,7 @@
 
                     if(square.building) {
                         div.style.backgroundColor = square.building.colour;
+                        div.style.cursor = "pointer"
                         div.dataset.buildingId = square.building.id;
                     }
 
@@ -112,15 +127,21 @@
                     div.title = `(${square.x}, ${square.y}): ${typeClass}`;
                     gridDiv.appendChild(div);
 
-                    // Add click event to log type if not dragging
+                    // Add click event if not dragging
                     div.addEventListener('click', function(e) {
+
                         if (!isDragging && !isRotating3D && square.building) {
+
                             clearBuildingHighlights();
+
                             // Highlight matching search result if visible
+                            /*
                             var items = document.querySelectorAll('#searchResults div[data-building-id]');
+
                             for (var i = 0; i < items.length; i++) {
+                                
                                 if (items[i].getAttribute('data-building-id') === String(square.building.id)) {
-                                    // Remove previous selection
+                                    
                                     var prevSelected = document.querySelector('#searchResults div.selected-result');
                                     if (prevSelected) {
                                         prevSelected.classList.remove('selected-result');
@@ -133,11 +154,14 @@
                                     items[i].classList.add('selected-result');
                                 }
                             }
+                            */
+
                             // Highlight all matching squares
                             var squares = document.querySelectorAll('.square[data-building-id="' + square.building.id + '"]');
                             for (var k = 0; k < squares.length; k++) {
                                 squares[k].style.border = '3px solid yellow';
                             }
+
                             // Load building profile
                             showBuildingProfile(square.building.id);
                         }
@@ -158,15 +182,22 @@
                 grid.style.left = offsetX + 'px';
                 grid.style.top = offsetY + 'px';
                 */
+
                centerGridInContainer();
+
             })
             .catch(error => {
                 console.error('Error loading maps.json:', error);
             });
 
-        // Drag and 3D rotate logic
+        /*
+         *
+         * Dragging and 3D rotation logic.
+         * 
+         */
         const grid = document.getElementById('grid');
         const container = document.getElementById('container');
+
         let isDragging = false;
         let isRotating3D = false;
         let lastX = 0, lastY = 0;
@@ -179,11 +210,14 @@
                 isRotating3D = true;
                 lastX = e.clientX;
                 lastY = e.clientY;
-            } else if (e.button === 2 || e.ctrlKey) { // Right click or Ctrl+Click: drag
+            } 
+            /*
+            else if (e.button === 2 || e.ctrlKey) { // Right click or Ctrl+Click: drag
                 isDragging = true;
                 lastX = e.clientX;
                 lastY = e.clientY;
             }
+            */
         });
 
         container.addEventListener('mousemove', (e) => {
@@ -219,7 +253,11 @@
         // Prevent context menu on right click
         container.addEventListener('contextmenu', e => e.preventDefault());
 
-        // Touch support for mobile (optional, only 2D drag here)
+        /*
+         *
+         * Touch support for mobile (optional, only 2D drag here).
+         * 
+         */
         let lastTouchDist = null;
         container.addEventListener('touchstart', (e) => {
             if (e.touches.length === 1) {
@@ -232,6 +270,7 @@
                 pinchStartScale = scale;
             }
         });
+
         container.addEventListener('touchmove', (e) => {
             if (isDragging && e.touches.length === 1) {
                 offsetX += e.touches[0].clientX - lastX;
@@ -247,6 +286,7 @@
                 grid.style.transform = `scale(${scale}) rotateX(${rotateX}deg) rotateY(${rotateY}deg)`;
             }
         });
+
         container.addEventListener('touchend', (e) => {
             isDragging = false;
             if (e.touches.length < 2) {
@@ -254,12 +294,14 @@
             }
         });
 
-        // Use scroll (wheel) to zoom in and out
+        /*
+         *
+         * Use scroll (wheel) to zoom in and out.
+         * 
+         */
         container.addEventListener('wheel', (e) => {
             e.preventDefault();
             const zoomIntensity = 0.1;
-            const container = document.getElementById('container');
-            const grid = document.getElementById('grid');
             const gridHeight = 30 * 20 + 29 * 1;
             const minScale = Math.max(0.5, container.clientHeight / (2 * gridHeight));
             const maxScale = Math.min(3, (container.clientHeight * 0.95) / gridHeight);
@@ -270,17 +312,32 @@
                 scale -= zoomIntensity;
             }
             scale = Math.max(minScale, Math.min(maxScale, scale));
-            // Clamp rotation so the map can't be flipped past the back
             rotateX = Math.max(-89, Math.min(89, rotateX));
             rotateY = Math.max(-89, Math.min(89, rotateY));
             grid.style.transform = `scale(${scale}) rotateX(${rotateX}deg) rotateY(${rotateY}deg)`;
-            clampOffsets();
+            // clampOffsets();
+            // centerGridInContainer();
         }, { passive: false });
 
-        // Search form logic
+        
+        /*
+         *
+         * Recenter grid when window is resized.
+         * 
+         */ 
+        window.addEventListener('resize', function() {
+            centerGridInContainer();
+        });
+
+        /*
+         *
+         * Buildings serch form and results.
+         * 
+         */ 
         const searchInput = document.getElementById('searchInput');
         const searchResults = document.getElementById('searchResults');
         const profileView = document.getElementById('profileView');
+
         let searchTimeout = null;
 
         function attachResultEvents() {
@@ -370,29 +427,49 @@
             }, 400);
         });
 
+        /*
+         *
+         * Functions.
+         * 
+         */ 
         function centerGridInContainer() {
+
             const container = document.getElementById('container');
-            const grid = document.getElementById('grid');
-            const gridWidth = 27 * 20 + 26 * 1; // squares + gaps
-            const gridHeight = 30 * 20 + 29 * 1;
             const containerRect = container.getBoundingClientRect();
-            offsetX = (containerRect.width - gridWidth * scale) / 2;
-            offsetY = (containerRect.height - gridHeight * scale) / 2;
+            const grid = document.getElementById('grid');
+            const gridCheck = document.getElementById('grid-check');
+            const gridRect = grid.getBoundingClientRect();
+
+            const gridWidth = 27 * 20 + 26 * scale;
+            const gridHeight = 30 * 20 + 29 * scale;
+
+            offsetX = (containerRect.width - gridWidth) / 2;
+            offsetY = (containerRect.height - gridHeight) / 2;
+            
             grid.style.left = offsetX + 'px';
             grid.style.top = offsetY + 'px';
+
         }
+
         // Call on initial load after grid is created
         centerGridInContainer();
 
         // Recenter grid when window is resized
-        window.addEventListener('resize', centerGridInContainer);
+        window.addEventListener('resize', function() {
+            centerGridInContainer();
+        });
+
+        document.getElementById('centerMapBtn').addEventListener('click', function() {
+            centerGridInContainer();
+        });
 
         function showBuildingProfile(buildingId) {
+
             fetch('https://api.brickmmo.com/map/building/city_id/' + cityId + '/building_id/' + buildingId)
                 .then(res => res.json())
                 .then(profile => {
-                    var html = '<div style="margin-bottom:10px;"><a href="javascript: return false;" id="backToResults" style="margin-bottom:10px;">&larr; Back to Results</a></div>';
-                    if (profile.building.colour) html += '<div style="margin-bottom: 10px; background-color:' + profile.building.colour + '; height: 5px;"></div>';
+                    var html = '<div style="margin-bottom:10px;"><a href="javascript: return false;" id="backToResults" style="margin-bottom:10px;">&larr; Back to Results</a>';
+                    if (profile.building.colour) html += '<div style="margin: 10px 0; background-color:' + profile.building.colour + '; height: 5px;"></div>';
                     if (profile.building.name) html += '<h2 style="margin-top:0;">' + profile.building.name + '</h2>';
                     if (profile.road.name) html += '<p>' + profile.building.number + ' ' + profile.road.name + '<br>' + profile.city.name + '</p>';
                     if (profile.building.set) html += '<p>Set: <a href="https://www.lego.com/en-ca/product/' + profile.building.set + '">#' + profile.building.set + '</a></p>';
@@ -411,26 +488,32 @@
                         });
                     }
                 })
+
                 .catch(() => {
                     profileView.innerHTML = '<div>Error loading building profile.</div>';
                     searchResults.style.display = 'none';
                     profileView.style.display = 'block';
                 });
+
         }
 
         function clearBuildingHighlights() {
+
             // Remove highlight from all squares
             var squares = document.querySelectorAll('.square[data-building-id]');
             for (var i = 0; i < squares.length; i++) {
                 squares[i].style.border = '';
             }
+
             // Remove highlight from all search results
             var results = document.querySelectorAll('#searchResults div.selected-result');
             for (var i = 0; i < results.length; i++) {
                 results[i].classList.remove('selected-result');
             }
+
         }
 
     </script>
+
 </body>
 </html>
