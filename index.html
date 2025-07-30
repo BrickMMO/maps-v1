@@ -16,7 +16,7 @@
             position: absolute;
             left: 0;
             top: 0;
-            width: 300px;
+            width: 400px;
             height: 100vh;
             background: #222;
             color: #fff;
@@ -28,9 +28,9 @@
         }
         #container {
             position: absolute;
-            left: 300px;
+            left: 400px;
             top: 0;
-            width: calc(100vw - 300px);
+            width: calc(100vw - 400px);
             height: 100vh;
             overflow: hidden;
             touch-action: none;
@@ -71,14 +71,19 @@
 <body>
 
     <div id="sidebar">
+
+        <div id="stopResults"></div>
+
         <form id="searchForm" autocomplete="off" style="margin-bottom:20px;">
-            <label for="searchInput" style="display:block;margin-bottom:8px;">Search Buildings:</label>
-            <input type="text" id="searchInput" style="width:100%;padding:8px; box-sizing: border-box;" placeholder="Type to search..." />
+            <input type="text" id="searchInput" style="font-size: 120%; width:100%;padding:8px; box-sizing: border-box;" />
         </form>
         <!--<button id="centerMapBtn" style="width:100%;margin-bottom:20px;">Center Map</button>-->
+        
         <div id="searchResults"></div>
         <div id="profileView" style="display:none;"></div>
+
     </div>
+
     <div id="container">
         <div id="grid"></div>
     </div>
@@ -337,6 +342,7 @@
         const searchInput = document.getElementById('searchInput');
         const searchResults = document.getElementById('searchResults');
         const profileView = document.getElementById('profileView');
+        const stopResults = document.getElementById('stopResults');
 
         let searchTimeout = null;
 
@@ -459,34 +465,82 @@
             centerGridInContainer();
         });
 
+        /*
         document.getElementById('centerMapBtn').addEventListener('click', function() {
             centerGridInContainer();
         });
+        */
 
-        function showBuildingProfile(buildingId) {
+        function showBuildingProfile(buildingId, target) {
+
+            if (!target) target = 'profile';
 
             fetch('https://api.brickmmo.com/map/building/city_id/' + cityId + '/building_id/' + buildingId)
                 .then(res => res.json())
                 .then(profile => {
-                    var html = '<div style="margin-bottom:10px;"><a href="javascript: return false;" id="backToResults" style="margin-bottom:10px;">&larr; Back to Results</a>';
+
+                    var html = '<div data-building-id="' + buildingId + '" style="position:relative;">';
+                    
+                    if (target == 'profile') {
+                        html += '<a href="javascript: void(0);" id="backToResults" style="display:block; margin-bottom:10px;">&larr; Back to Results</a>';
+                        html += '<a href="javascript: void(0);" data-building-id="' + buildingId + '" id="addToStops" style="display:block; margin-bottom:10px;">&plus; Add to Stops</a>';
+                    }
+
                     if (profile.building.colour) html += '<div style="margin: 10px 0; background-color:' + profile.building.colour + '; height: 5px;"></div>';
                     if (profile.building.name) html += '<h2 style="margin-top:0;">' + profile.building.name + '</h2>';
-                    if (profile.road.name) html += '<p>' + profile.building.number + ' ' + profile.road.name + '<br>' + profile.city.name + '</p>';
-                    if (profile.building.set) html += '<p>Set: <a href="https://www.lego.com/en-ca/product/' + profile.building.set + '">#' + profile.building.set + '</a></p>';
-                    if (profile.building.set) html += '<img style="background-color:#fff; width:100%;" src="' + rebrickableCdn + profile.building.set + '-1.jpg">';
-                    if (profile.building.colour) html += '<div style="margin-top: 10px; background-color:' + profile.building.colour + '; height: 5px;"></div>';
-                    profileView.innerHTML = html;
-                    searchResults.style.display = 'none';
-                    profileView.style.display = 'block';
 
-                    var backBtn = document.getElementById('backToResults');
-                    if (backBtn) {
+                    if (target == 'profile') {
+
+                        if (profile.road.name) html += '<p>' + profile.building.number + ' ' + profile.road.name + '<br>' + profile.city.name + '</p>';
+                        if (profile.building.set) html += '<p>Set: <a href="https://www.lego.com/en-ca/product/' + profile.building.set + '">#' + profile.building.set + '</a></p>';
+                        if (profile.building.set) html += '<img style="background-color:#fff; width:100%;" src="' + rebrickableCdn + profile.building.set + '-1.jpg">';
+                        if (profile.building.colour) html += '<div style="margin: 10px 0; background-color:' + profile.building.colour + '; height: 5px;"></div>';
+
+                    }
+                    else
+                    {
+
+                        html += '<a href="javascript:void(0);" class="removeStop" style="display: block; position: absolute; top: 20px; right: 0;">&#x2716;</a>';
+                        html += '<a href="javascript:void(0);" class="reorderStop" style="display: block; position: absolute; top: 18px; right: 15px;">&#x2630;</a>';
+
+                    }
+
+                    html += '</div>';
+
+                    searchResults.style.display = 'none';
+
+                    if (target == 'profile') {
+
+                        profileView.innerHTML = html;
+                        profileView.style.display = 'block';
+
+                        var backBtn = document.getElementById('backToResults');
                         backBtn.addEventListener('click', function() {
                             profileView.style.display = 'none';
                             searchResults.style.display = 'block';
                             clearBuildingHighlights();
                         });
+
+                        var addBtn = document.getElementById('addToStops');
+                        addBtn.addEventListener('click', function(event) {
+                            profileView.style.display = 'none';
+                            searchResults.style.display = 'block';
+                            showBuildingProfile(event.target.dataset.buildingId, 'stop');
+                            clearBuildingHighlights();
+                        });
+
                     }
+                    else if (target == 'stop') {
+
+                        stopResults.innerHTML += html;
+                        stopResults.style.display = 'block';
+
+                        searchInput.value = '';
+
+                        attachRemoveEvents();
+
+                    }
+                    
                 })
 
                 .catch(() => {
@@ -495,6 +549,18 @@
                     profileView.style.display = 'block';
                 });
 
+        }
+
+        function attachRemoveEvents() {
+
+            var removeButtons = stopResults.querySelectorAll('.removeStop');
+            for (var i = 0; i < removeButtons.length; i++) {
+                removeButtons[i].addEventListener('click', function(event) {
+                    event.preventDefault();
+                    event.target.parentElement.remove();
+                });
+            }
+            
         }
 
         function clearBuildingHighlights() {
