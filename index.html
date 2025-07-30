@@ -61,9 +61,11 @@
         a:link,
         a:active,
         a:visited,
-        a:hover {
+        a:hover,
+        a {
             color: #ff5b00 !important;
             text-decoration: none !important;
+            cursor: pointer;
         }
     </style>
 
@@ -72,6 +74,9 @@
 
     <div id="sidebar">
 
+        <div style="text-align: center; margin-bottom: 20px;;">
+            <img src="https://cdn.brickmmo.com/images@1.0.0/brickmmo-logo-coloured-horizontal.png" style="width: 80%;">
+        </div>
         <div id="stopResults"></div>
 
         <form id="searchForm" autocomplete="off" style="margin-bottom:20px;">
@@ -500,8 +505,8 @@
                     else
                     {
 
-                        html += '<a href="javascript:void(0);" class="removeStop" style="display: block; position: absolute; top: 20px; right: 0;">&#x2716;</a>';
-                        html += '<a href="javascript:void(0);" class="reorderStop" style="display: block; position: absolute; top: 18px; right: 15px;">&#x2630;</a>';
+                        html += '<a class="removeStop" style="display: block; position: absolute; top: 20px; right: 0;">&#x2716;</a>';
+                        html += '<a class="reorderStop" style="display: block; position: absolute; top: 18px; right: 15px;">&#x2630;</a>';
 
                     }
 
@@ -560,7 +565,45 @@
                     event.target.parentElement.remove();
                 });
             }
-            
+
+            // Drag and drop for reorder
+            var stopDivs = stopResults.querySelectorAll('div[data-building-id]');
+            stopDivs.forEach(function(stopDiv) {
+                var reorderBtn = stopDiv.querySelector('.reorderStop');
+                if (reorderBtn) {
+                    stopDiv.draggable = true;
+
+                    stopDiv.addEventListener('dragstart', function(e) {
+                        stopDiv.classList.add('dragging');
+                        e.dataTransfer.effectAllowed = 'move';
+                    });
+
+                    stopDiv.addEventListener('dragend', function(e) {
+                        stopDiv.classList.remove('dragging');
+                    });
+                }
+            });
+
+            stopResults.addEventListener('dragover', function(e) {
+                e.preventDefault();
+                var dragging = stopResults.querySelector('.dragging');
+                var stopDivs = Array.from(stopResults.querySelectorAll('div[data-building-id]:not(.dragging)'));
+                var afterElement = null;
+                for (var i = 0; i < stopDivs.length; i++) {
+                    var rect = stopDivs[i].getBoundingClientRect();
+                    if (e.clientY < rect.top + rect.height / 2) {
+                        afterElement = stopDivs[i];
+                        break;
+                    }
+                }
+                if (dragging) {
+                    if (afterElement) {
+                        stopResults.insertBefore(dragging, afterElement);
+                    } else {
+                        stopResults.appendChild(dragging);
+                    }
+                }
+            });
         }
 
         function clearBuildingHighlights() {
