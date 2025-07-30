@@ -484,7 +484,7 @@
                 .then(res => res.json())
                 .then(profile => {
 
-                    var html = '<div data-building-id="' + buildingId + '" style="position:relative;">';
+                    var html = '<div data-building-id="' + buildingId + '" data-square-id="' + profile.building.square_id + '" style="position:relative;">';
                     
                     if (target == 'profile') {
                         html += '<a href="javascript: void(0);" id="backToResults" style="display:block; margin-bottom:10px;">&larr; Back to Results</a>';
@@ -527,11 +527,12 @@
                         });
 
                         var addBtn = document.getElementById('addToStops');
-                        addBtn.addEventListener('click', function(event) {
+                        addBtn.addEventListener('click', function(e) {
                             profileView.style.display = 'none';
                             searchResults.style.display = 'block';
-                            showBuildingProfile(event.target.dataset.buildingId, 'stop');
+                            showBuildingProfile(e.target.dataset.buildingId, 'stop');
                             clearBuildingHighlights();
+                            updateRoute();
                         });
 
                     }
@@ -560,10 +561,14 @@
 
             var removeButtons = stopResults.querySelectorAll('.removeStop');
             for (var i = 0; i < removeButtons.length; i++) {
-                removeButtons[i].addEventListener('click', function(event) {
-                    event.preventDefault();
-                    event.target.parentElement.remove();
+
+                removeButtons[i].addEventListener('click', function(e) {
+                    console.log('REMOVCE');
+                    e.preventDefault();
+                    e.target.parentElement.remove();
+                    updateRoute();
                 });
+                
             }
 
             // Drag and drop for reorder
@@ -573,22 +578,28 @@
                 if (reorderBtn) {
                     stopDiv.draggable = true;
 
+                    // stopDiv.removeEventListener('dragstart');
                     stopDiv.addEventListener('dragstart', function(e) {
                         stopDiv.classList.add('dragging');
                         e.dataTransfer.effectAllowed = 'move';
                     });
 
+                    // stopDiv.removeEventListener('dragend');
                     stopDiv.addEventListener('dragend', function(e) {
                         stopDiv.classList.remove('dragging');
                     });
                 }
             });
 
+            // stopResults.removeEventListener('dragover');
             stopResults.addEventListener('dragover', function(e) {
+
                 e.preventDefault();
+
                 var dragging = stopResults.querySelector('.dragging');
                 var stopDivs = Array.from(stopResults.querySelectorAll('div[data-building-id]:not(.dragging)'));
                 var afterElement = null;
+
                 for (var i = 0; i < stopDivs.length; i++) {
                     var rect = stopDivs[i].getBoundingClientRect();
                     if (e.clientY < rect.top + rect.height / 2) {
@@ -603,7 +614,15 @@
                         stopResults.appendChild(dragging);
                     }
                 }
+
             });
+
+            stopResults.addEventListener('drop', onStopDrag);
+        }
+
+        function onStopDrag(e) {
+            e.stopPropagation();
+            updateRoute();
         }
 
         function clearBuildingHighlights() {
@@ -620,6 +639,10 @@
                 results[i].classList.remove('selected-result');
             }
 
+        }
+
+        function updateRoute() {
+            console.log("CHANGE");
         }
 
     </script>
