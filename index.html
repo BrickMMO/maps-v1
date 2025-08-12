@@ -12,6 +12,14 @@
             margin: 0;
             padding: 0;
         }
+        #container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+            touch-action: none;
+        }
+
         #sidebar {
             position: absolute;
             left: 0;
@@ -26,10 +34,9 @@
             font-family: sans-serif;
             box-sizing: border-box;
         }
-        #container {
+        #main {
             position: absolute;
             left: 400px;
-            top: 0;
             width: calc(100vw - 400px);
             height: 100vh;
             overflow: hidden;
@@ -72,25 +79,29 @@
 </head>
 <body>
 
-    <div id="sidebar">
-
-        <div style="text-align: center; margin-bottom: 20px;;">
-            <img src="https://cdn.brickmmo.com/images@1.0.0/brickmmo-logo-coloured-horizontal.png" style="width: 80%;">
-        </div>
-        <div id="stopResults"></div>
-
-        <form id="searchForm" autocomplete="off" style="margin-bottom:20px;">
-            <input type="text" id="searchInput" style="font-size: 120%; width:100%;padding:8px; box-sizing: border-box;" />
-        </form>
-        <!--<button id="centerMapBtn" style="width:100%;margin-bottom:20px;">Center Map</button>-->
-        
-        <div id="searchResults"></div>
-        <div id="profileView" style="display:none;"></div>
-
-    </div>
-
     <div id="container">
-        <div id="grid"></div>
+
+        <div id="sidebar">
+
+            <div style="text-align: center; margin-bottom: 20px;;">
+                <img src="https://cdn.brickmmo.com/images@1.0.0/brickmmo-logo-coloured-horizontal.png" style="width: 80%;">
+            </div>
+            <div id="stopResults"></div>
+
+            <form id="searchForm" autocomplete="off" style="margin-bottom:20px;">
+                <input type="text" id="searchInput" style="font-size: 120%; width:100%;padding:8px; box-sizing: border-box;" />
+            </form>
+            <!--<button id="centerMapBtn" style="width:100%;margin-bottom:20px;">Center Map</button>-->
+            
+            <div id="searchResults"></div>
+            <div id="profileView" style="display:none;"></div>
+
+        </div>
+
+        <div id="main">
+            <div id="grid"></div>
+        </div>
+
     </div>
 
     <script>
@@ -179,21 +190,21 @@
                 });
 
                 /*
-                // Center the grid in the container
-                const container = document.getElementById('container');
+                // Center the grid in the main
+                const main = document.getElementById('main');
                 const grid = document.getElementById('grid');
-                // Get container and grid sizes
-                const containerRect = container.getBoundingClientRect();
+                // Get main and grid sizes
+                const mainRect = main.getBoundingClientRect();
                 const gridWidth = 27 * 20 + 26 * 1; // squares + gaps
                 const gridHeight = 30 * 20 + 29 * 1;
                 // Set initial offset to center
-                offsetX = (containerRect.width - gridWidth) / 2;
-                offsetY = (containerRect.height - gridHeight) / 2;
+                offsetX = (mainRect.width - gridWidth) / 2;
+                offsetY = (mainRect.height - gridHeight) / 2;
                 grid.style.left = offsetX + 'px';
                 grid.style.top = offsetY + 'px';
                 */
 
-               centerGridInContainer();
+               centerGridInMain();
 
             })
             .catch(error => {
@@ -206,7 +217,7 @@
          * 
          */
         const grid = document.getElementById('grid');
-        const container = document.getElementById('container');
+        const main = document.getElementById('main');
 
         let isDragging = false;
         let isRotating3D = false;
@@ -215,7 +226,7 @@
         let rotateX = 0, rotateY = 0;
         let scale = 1;
 
-        container.addEventListener('mousedown', (e) => {
+        main.addEventListener('mousedown', (e) => {
             if (e.button === 0 && !e.ctrlKey) { // Left click: 3D rotate
                 isRotating3D = true;
                 lastX = e.clientX;
@@ -230,7 +241,7 @@
             */
         });
 
-        container.addEventListener('mousemove', (e) => {
+        main.addEventListener('mousemove', (e) => {
             if (isDragging) {
                 offsetX += e.clientX - lastX;
                 offsetY += e.clientY - lastY;
@@ -250,18 +261,18 @@
             }
         });
 
-        container.addEventListener('mouseup', () => {
+        main.addEventListener('mouseup', () => {
             isDragging = false;
             isRotating3D = false;
         });
 
-        container.addEventListener('mouseleave', () => {
+        main.addEventListener('mouseleave', () => {
             isDragging = false;
             isRotating3D = false;
         });
 
         // Prevent context menu on right click
-        container.addEventListener('contextmenu', e => e.preventDefault());
+        main.addEventListener('contextmenu', e => e.preventDefault());
 
         /*
          *
@@ -269,7 +280,7 @@
          * 
          */
         let lastTouchDist = null;
-        container.addEventListener('touchstart', (e) => {
+        main.addEventListener('touchstart', (e) => {
             if (e.touches.length === 1) {
                 isDragging = true;
                 lastX = e.touches[0].clientX;
@@ -281,7 +292,7 @@
             }
         });
 
-        container.addEventListener('touchmove', (e) => {
+        main.addEventListener('touchmove', (e) => {
             if (isDragging && e.touches.length === 1) {
                 offsetX += e.touches[0].clientX - lastX;
                 offsetY += e.touches[0].clientY - lastY;
@@ -297,7 +308,7 @@
             }
         });
 
-        container.addEventListener('touchend', (e) => {
+        main.addEventListener('touchend', (e) => {
             isDragging = false;
             if (e.touches.length < 2) {
                 pinchStartDist = null;
@@ -309,12 +320,12 @@
          * Use scroll (wheel) to zoom in and out.
          * 
          */
-        container.addEventListener('wheel', (e) => {
+        main.addEventListener('wheel', (e) => {
             e.preventDefault();
             const zoomIntensity = 0.1;
             const gridHeight = 30 * 20 + 29 * 1;
-            const minScale = Math.max(0.5, container.clientHeight / (2 * gridHeight));
-            const maxScale = Math.min(3, (container.clientHeight * 0.95) / gridHeight);
+            const minScale = Math.max(0.5, main.clientHeight / (2 * gridHeight));
+            const maxScale = Math.min(3, (main.clientHeight * 0.95) / gridHeight);
 
             if (e.deltaY < 0) {
                 scale += zoomIntensity;
@@ -326,7 +337,7 @@
             rotateY = Math.max(-89, Math.min(89, rotateY));
             grid.style.transform = `scale(${scale}) rotateX(${rotateX}deg) rotateY(${rotateY}deg)`;
             // clampOffsets();
-            // centerGridInContainer();
+            // centerGridInMain();
         }, { passive: false });
 
         
@@ -336,7 +347,7 @@
          * 
          */ 
         window.addEventListener('resize', function() {
-            centerGridInContainer();
+            centerGridInMain();
         });
 
         /*
@@ -443,10 +454,10 @@
          * Functions.
          * 
          */ 
-        function centerGridInContainer() {
+        function centerGridInMain() {
 
-            const container = document.getElementById('container');
-            const containerRect = container.getBoundingClientRect();
+            const main = document.getElementById('main');
+            const mainRect = main.getBoundingClientRect();
             const grid = document.getElementById('grid');
             const gridCheck = document.getElementById('grid-check');
             const gridRect = grid.getBoundingClientRect();
@@ -454,8 +465,8 @@
             const gridWidth = 27 * 20 + 26 * scale;
             const gridHeight = 30 * 20 + 29 * scale;
 
-            offsetX = (containerRect.width - gridWidth) / 2;
-            offsetY = (containerRect.height - gridHeight) / 2;
+            offsetX = (mainRect.width - gridWidth) / 2;
+            offsetY = (mainRect.height - gridHeight) / 2;
             
             grid.style.left = offsetX + 'px';
             grid.style.top = offsetY + 'px';
@@ -463,16 +474,16 @@
         }
 
         // Call on initial load after grid is created
-        centerGridInContainer();
+        centerGridInMain();
 
         // Recenter grid when window is resized
         window.addEventListener('resize', function() {
-            centerGridInContainer();
+            centerGridInMain();
         });
 
         /*
         document.getElementById('centerMapBtn').addEventListener('click', function() {
-            centerGridInContainer();
+            centerGridInMain();
         });
         */
 
@@ -646,6 +657,9 @@
         }
 
     </script>
+
+    <script src="https://cdn.brickmmo.com/bar@1.0.0/bar.js"></script>
+
 
 </body>
 </html>
